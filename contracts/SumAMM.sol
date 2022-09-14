@@ -19,6 +19,11 @@ contract SumAMM is IAMM {
         _;
     }
 
+    modifier isValidAmount(uint _amount) {
+        if (_amount == 0) revert InvalidAmountError(_amount);
+        _;
+    }
+
     constructor(address _tokenA, address _tokenB) {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
@@ -42,25 +47,23 @@ contract SumAMM is IAMM {
     function swap(address _addr, uint _amount) 
         external 
         isValidToken(_addr)
+        isValidAmount(_amount)
         returns (uint) 
     {
+        address self = address(this);
         bool isA = address(tokenA) == _addr;
 
-        (IERC20 tokenIn, IERC20 tokenOut, uint resIn, uint resOut) = isA
-            ? (tokenA, tokenB, reserveA, reserveB)
-            : (tokenB, tokenA, reserveB, reserveA);
+        (IERC20 tokenIn, IERC20 tokenOut, uint resIn) = isA
+            ? (tokenA, tokenB, reserveA)
+            : (tokenB, tokenA, reserveB);
 
-        tokenIn.transferFrom(msg.sender, address(this), _amount);
-        uint amountIn = tokenIn.balanceOf(address(this)) - resIn;
+        tokenIn.transferFrom(msg.sender, self, _amount);
+        uint amountIn = tokenIn.balanceOf(self) - resIn;
         uint amountOut = (amountIn * 997) / 1000;
-
-        (uint v1, uint v2) = isA
-            ? (resIn + amountIn, resOut - amountOut)
-            : (resOut - amountOut, resIn + amountIn);
-        
-        _update(v1, v2);
         tokenOut.transfer(msg.sender, amountOut);
 
+        _update(tokenA.balanceOf(self), tokenB.balanceOf(self));
+        
         emit CallSawpEvent(msg.sender, address(tokenIn), amountIn, address(tokenOut), amountOut);
         return amountOut;
     }

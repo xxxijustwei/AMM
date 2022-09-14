@@ -8,6 +8,7 @@ interface IAMM {
     event RemoveLiquidityEvent(address indexed sender, uint shares, uint v1, uint v2);
 
     error InvalidTokenError(address addr);
+    error InvalidAmountError(uint amount);
 
     function swap(address _addr, uint _amount) external returns (uint);
 
